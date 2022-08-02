@@ -63,7 +63,7 @@ def as2bytes(i):
 
 
 def get_packet_type(pkt):
-    return TFTP(int.from_bytes(pkt[0:2], byteorder="big"))
+    return TFTP(int.from_bytes(pkt[:2], byteorder="big"))
 
 
 def get_packet_num(pkt):

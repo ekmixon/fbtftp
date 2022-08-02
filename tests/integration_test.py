@@ -84,9 +84,9 @@ class integrationTest(unittest.TestCase):
         logging.getLogger().setLevel(logging.DEBUG)
 
         self.tmpdirname = tempfile.TemporaryDirectory()
-        logging.info("Created temporary directory %s" % self.tmpdirname)
+        logging.info(f"Created temporary directory {self.tmpdirname}")
 
-        self.tmpfile = "%s/%s" % (self.tmpdirname.name, "test.file")
+        self.tmpfile = f"{self.tmpdirname.name}/test.file"
         self.tmpfile_data = os.urandom(512 * 5)
         with open(self.tmpfile, "wb") as fout:
             fout.write(self.tmpfile_data)
@@ -120,8 +120,7 @@ class integrationTest(unittest.TestCase):
                 self.tmpdirname.name,
                 self.stats,
             )
-            child_pid = os.fork()
-            if child_pid:
+            if child_pid := os.fork():
                 # I am the parent
                 try:
                     (p_stdout, p_stderr, p_returncode) = busyboxClient(

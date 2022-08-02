@@ -51,10 +51,10 @@ class NetasciiReader:
             return self._size
         slurp, size = io.BytesIO(), 0
         while True:
-            data = self.read(512)
-            if not data:
+            if data := self.read(512):
+                size += slurp.write(data)
+            else:
                 break
-            size += slurp.write(data)
         self._slurp, self._size = slurp, size
         self._slurp.seek(0)
         return size

@@ -125,9 +125,9 @@ class BaseHandler(multiprocessing.Process):
 
         self._peer = peer
         logging.info(
-            "New connection from peer `%s` asking for path `%s`"
-            % (str(peer), str(path))
+            f"New connection from peer `{str(peer)}` asking for path `{str(path)}`"
         )
+
         self._family = socket.AF_INET6
         # the format of the peer tuple is different for v4 and v6
         if isinstance(ipaddress.ip_address(server_addr[0]), ipaddress.IPv4Address):
@@ -146,7 +146,7 @@ class BaseHandler(multiprocessing.Process):
                 "error_message": str(e),
             }
         except Exception as e:
-            logging.exception("Caught exception: %s." % e)
+            logging.exception(f"Caught exception: {e}.")
             self._stats.error = {
                 "error_code": constants.ERR_UNDEFINED,
                 "error_message": str(e),
@@ -179,7 +179,7 @@ class BaseHandler(multiprocessing.Process):
         try:
             self._on_close()
         except Exception as e:
-            logging.exception("Exception raised when calling _on_close: %s" % e)
+            logging.exception(f"Exception raised when calling _on_close: {e}")
         finally:
             logging.debug("Closing response data object")
             if self._response_data:
@@ -201,20 +201,19 @@ class BaseHandler(multiprocessing.Process):
         # Their value is already hold in self._retries and self._timeout.
         del self._options["retries"]
         del self._options["default_timeout"]
-        logging.info(
-            "Options requested from peer {}:  {}".format(self._peer, self._options)
-        )
+        logging.info(f"Options requested from peer {self._peer}:  {self._options}")
         self._stats.options_in = self._options
-        if "mode" in self._options and self._options["mode"] == "netascii":
-            self._response_data = NetasciiReader(self._response_data)
-        elif "mode" in self._options and self._options["mode"] != "octet":
-            self._stats.error = {
-                "error_code": constants.ERR_ILLEGAL_OPERATION,
-                "error_message": "Unknown mode: %r" % self._options["mode"],
-            }
-            self._transmit_error()
-            self._close()
-            return  # no way anything else will succeed now
+        if "mode" in self._options:
+            if self._options["mode"] == "netascii":
+                self._response_data = NetasciiReader(self._response_data)
+            elif self._options["mode"] != "octet":
+                self._stats.error = {
+                    "error_code": constants.ERR_ILLEGAL_OPERATION,
+                    "error_message": "Unknown mode: %r" % self._options["mode"],
+                }
+                self._transmit_error()
+                self._close()
+                return  # no way anything else will succeed now
         # Let's ack the options in the same order we got asked for them
         # The RFC mentions that option order is not significant, but it can't
         # hurt. This relies on Python 3.6 dicts to be ordered.
@@ -231,9 +230,7 @@ class BaseHandler(multiprocessing.Process):
                 self._timeout = int(v)
 
         self._options = opts_to_ack  # only ACK options we can handle
-        logging.info(
-            "Options to ack for peer {}:  {}".format(self._peer, self._options)
-        )
+        logging.info(f"Options to ack for peer {self._peer}:  {self._options}")
         self._stats.blksize = self._block_size
         self._stats.options = self._options
         self._stats.options_acked = self._options
@@ -291,7 +288,7 @@ class BaseHandler(multiprocessing.Process):
         except socket.timeout:
             return
         if peer != self._peer:
-            logging.error("Unexpected peer: %s, expected %s" % (peer, self._peer))
+            logging.error(f"Unexpected peer: {peer}, expected {self._peer}")
             self._should_stop = True
             return
         code, block_number = struct.unpack("!HH", data[:4])
@@ -304,8 +301,9 @@ class BaseHandler(multiprocessing.Process):
             }
             # An error was reported by the client which terminates the exchange
             logging.error(
-                "Error reported from client: %s" % self._stats.error["error_message"]
+                f'Error reported from client: {self._stats.error["error_message"]}'
             )
+
             self._transmit_error()
             self._should_stop = True
             return
@@ -344,7 +342,7 @@ class BaseHandler(multiprocessing.Process):
             self._global_retransmits += 1
             return
 
-        error_msg = "timeout after {} retransmits.".format(self._retransmits)
+        error_msg = f"timeout after {self._retransmits} retransmits."
         if self._waiting_last_ack:
             error_msg += " Missed last ack."
 
@@ -366,16 +364,13 @@ class BaseHandler(multiprocessing.Process):
         try:
             last_size = 0  # current_block size before read. Used to check EOF.
             self._current_block = self._response_data.read(self._block_size)
-            while (
-                len(self._current_block) != self._block_size
-                and len(self._current_block) != last_size
-            ):
+            while len(self._current_block) not in [self._block_size, last_size]:
                 last_size = len(self._current_block)
                 self._current_block += self._response_data.read(
                     self._block_size - last_size
                 )
         except Exception as e:
-            logging.exception("Error while reading from source: %s" % e)
+            logging.exception(f"Error while reading from source: {e}")
             self._stats.error = {
                 "error_code": constants.ERR_UNDEFINED,
                 "error_message": "Error while reading from source",
@@ -411,7 +406,7 @@ class BaseHandler(multiprocessing.Process):
                 )
             )
         opts.append(b"")
-        fmt = str("!H")
+        fmt = "!H"
         packet = struct.pack(fmt, constants.OPCODE_OACK) + b"\x00".join(opts)
         self._get_listener().sendto(packet, self._peer)
         self._stats.packets_sent += 1
